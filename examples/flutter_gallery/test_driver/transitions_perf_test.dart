@@ -10,6 +10,7 @@ import 'package:file/local.dart';
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:path/path.dart' as path;
 import 'package:test/test.dart' hide TypeMatcher, isInstanceOf;
+import 'package:vm_service_client/vm_service_client.dart';
 
 const FileSystem _fs = LocalFileSystem();
 
@@ -180,8 +181,10 @@ Future<void> runDemos(List<String> demos, FlutterDriver driver) async {
 void main([List<String> args = const <String>[]]) {
   group('flutter gallery transitions', () {
     FlutterDriver driver;
+    VM vm;
     setUpAll(() async {
       driver = await FlutterDriver.connect();
+      vm = await driver.serviceClient.getVM();
 
       if (args.contains('--with_semantics')) {
         print('Enabeling semantics...');
@@ -200,6 +203,13 @@ void main([List<String> args = const <String>[]]) {
     });
 
     test('all demos', () async {
+
+      for (final isolateRef in vm.isolates) {
+        final isolate = await isolateRef.load();
+        if (isolate.isPaused) {
+          isolate.resume();
+        }
+      }
 
       // Collect timeline data for just a limited set of demos to avoid OOMs.
       final Timeline timeline = await driver.traceAction(
